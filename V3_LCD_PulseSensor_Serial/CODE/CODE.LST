@@ -1,0 +1,214 @@
+C51 COMPILER V8.12   CODE                                                                  03/29/2019 00:13:30 PAGE 1   
+
+
+C51 COMPILER V8.12, COMPILATION OF MODULE CODE
+OBJECT MODULE PLACED IN CODE.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE CODE.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include<reg51.h>       // Include Header file to Work With 8051 family Microcontroller
+   2          #include<stdio.h>   // Include header file stdio.h , as we are using sprintf() function
+   3          
+   4          #define LCDPort P1 // LCD Data Bus (PIN 7 t0 PIN 14) is Connected to P1(PIN 1 to PIN 8) of 8051
+   5          sbit    RS=P0^0;   // The RS pin of LCD (pin 4) is Connected to P0.0 (PIN 39) of 8051
+   6          sbit    RW=P0^1;   // The RW pin of LCD (pin 5) is Connected to P0.1 (PIN 38) of 8051
+   7          sbit    EN=P0^2;   // The EN pin of LCD (pin 6) is Connected to P0.2 (PIN 37) of 8051
+   8          
+   9          sbit SENSOR=P3^2;  // The output of the Pulse Sensor is Connected to P3.2 (PIN 12) of 8051
+  10          
+  11          //-------------------------------------------------------------------------------
+  12          
+  13          
+  14          void delay (int t) // This function will generate t ms delay
+  15           {
+  16   1           int i; // Declare local variable i to use as counter
+  17   1      
+  18   1               while(t>0) // Loop until t become ZERO
+  19   1                {
+  20   2                 i=1275; // Set thye Initial value of i with 1275
+  21   2                 while(i>0) i--; // Decrease the Value of i by -1, untill it become ZERO
+  22   2                 t--; // Decrease the value of t by -1
+  23   2                }
+  24   1       }
+  25          
+  26          
+  27          void LCDCommand(char c) // This function will send a command to LCD
+  28           {
+  29   1         RS=0; // RS=0 means, we are sending Command to LCD
+  30   1         RW=0; // RW=0 means, we are using the LCD in Write Mode
+  31   1         LCDPort=c; // Copy the Value of c(Command) into LCDPort (P1 in Our Case)
+  32   1         EN=1;      // Set EN PIN High  ----------------+
+  33   1         delay(2);  // Wait for 2 ms                                    +--- Generate a High to Low Pulse
+  34   1         EN=0;      // Reset the EN pin Back to LOW ----+
+  35   1       }
+  36              
+  37          void LCDData(char c) // This function will send a Data to LCD
+  38           {
+  39   1         RS=1; // RS=1 means, we are sending Data to LCD
+  40   1         RW=0; // RW=0 means, we are using the LCD in Write Mode
+  41   1         LCDPort=c; // Copy the Value of c(Data) into LCDPort (P1 in Our Case)
+  42   1         EN=1;      // Set EN PIN High  ----------------+
+  43   1         delay(2);  // Wait for 2 ms                                    +--- Generate a High to Low Pulse
+  44   1         EN=0;      // Reset the EN pin Back to LOW ----+
+  45   1       }
+  46          
+  47          // To use the LCD  we must have to initilized it
+  48          // Initilization is Nothing but providing the bsic information like
+  49          //  How many wire are connected to LCD, 
+  50          //  Whether it will display from Left to Right or Right To Left
+  51          // Whether it will display the Cursor or Not etc.
+  52          
+  53          void LCDInit() // This function Will Initilized the LCD
+  54           {
+  55   1         LCDCommand(0x38); // 0x38 - 8 Bit Mode
+C51 COMPILER V8.12   CODE                                                                  03/29/2019 00:13:30 PAGE 2   
+
+  56   1         LCDCommand(0x06); // 0x06 - Display From Left To Right
+  57   1         LCDCommand(0x0c); // 0x0c - Display On, Cursor Hide
+  58   1         LCDCommand(0x01); // 0x01 - Clear LCD
+  59   1       }
+  60          // String: A string is nothing but array of characters terminated by NULL ('\0')
+  61          //        array index start from 0
+  62          
+  63          void LCDPuts(char *s)  // This function will Display a string On Lcd
+  64          {
+  65   1          int i; // Declare Local vatriable i to use as index of the character of the String
+  66   1              for(i=0;s[i]!='\0';i++) // Scan each and every Character of the string One By One, Untill it encounter NU
+             -LL
+  67   1               { 
+  68   2                  LCDData(s[i]); // and display the character on LCD withj the help of LCDData() function 
+  69   2               }
+  70   1      }
+  71          
+  72          void init() // This function will initilized the Serial Communication
+  73           {
+  74   1          TMOD=0x20; // Timer 1 , 8 BIT AUTO RELOAD MODE
+  75   1              SCON=0x50; // 1 Start Bit + 8 Bit Data size     + 1 Stop Bit, No Parity BIT
+  76   1              TH1=0xfd;  // Generate 9600 Baud rate  @ 11.0592 MHz Crystel
+  77   1              TR1=1;     // Start Timer 1
+  78   1       }
+  79                    
+  80          void tx(char c)  // This function will transmit a character over serial Communication
+  81           {
+  82   1           SBUF=c; // Copy the value of c into SBUF
+  83   1               while(TI==0); // Wait untill all bits are transfered
+  84   1               TI=0;// Rest the TI flag so that it can transfer the Next data   
+  85   1       }
+  86          
+  87          void xputs(char *s) // This function will transmit a string over serial Communication
+  88          {
+  89   1         int i; // Declare Local vatriable i to use as index of the character of the String
+  90   1              for(i=0;s[i]!='\0';i++) // Scan each and every Character of the string One By One, Untill it encounter NU
+             -LL
+  91   1               { 
+  92   2                  tx(s[i]); // and transmit the character over serial Communication
+  93   2               }
+  94   1      }
+  95          
+  96          
+  97          
+  98           void main()  // starting of main() function
+  99            {
+ 100   1           
+ 101   1               int PULSE=0; // Declare and Initilizied Local Variable to Store Pulse Count
+ 102   1               int UNIT=0;  // Declare and Initilizied Local Variable to Current Unit
+ 103   1               char buffer[10]; // Declare an array of character to store converted data
+ 104   1               LCDInit(); // Initilizing the LCD
+ 105   1               init(); // Initilized the Serial PORT
+ 106   1               LCDPuts("   IoT Based    ");
+ 107   1               LCDCommand(0xc0); // Move the Cursor to the Staring of Second Line
+ 108   1               LCDPuts("  Energy Meter");
+ 109   1               delay(100); // Waith for 100 ms
+ 110   1      
+ 111   1               LCDCommand(0x01); // Clear the LCD
+ 112   1               LCDPuts("Developed By....");
+ 113   1               delay(100); // Waith for 100 ms
+ 114   1      
+ 115   1               LCDCommand(0xc0); // Move the Cursor to the Staring of Second Line
+C51 COMPILER V8.12   CODE                                                                  03/29/2019 00:13:30 PAGE 3   
+
+ 116   1           LCDPuts("Chinmoy Bharali ");
+ 117   1               delay(100); // Waith for 100 ms
+ 118   1      
+ 119   1               LCDCommand(0xc0); // Move the Cursor to the Staring of Second Line
+ 120   1           LCDPuts("Pari chetia     ");
+ 121   1               delay(100); // Waith for 100 ms
+ 122   1      
+ 123   1               LCDCommand(0xc0); // Move the Cursor to the Staring of Second Line
+ 124   1           LCDPuts("Kuhima Begum    ");
+ 125   1               delay(100); // Waith for 100 ms
+ 126   1      
+ 127   1      
+ 128   1               LCDCommand(0xc0); // Move the Cursor to the Staring of Second Line
+ 129   1           LCDPuts("Kuhima Begum    ");
+ 130   1               delay(100); // Waith for 100 ms
+ 131   1      
+ 132   1      
+ 133   1      
+ 134   1               LCDCommand(0x01); // Clear the LCD
+ 135   1               LCDPuts("Guided By");
+ 136   1               delay(100); // Waith for 100 ms
+ 137   1               LCDCommand(0xc0); // Move the Cursor to the Staring of Second Line
+ 138   1           LCDPuts("Parimita Saikia ");
+ 139   1               delay(100); // Waith for 100 ms
+ 140   1          
+ 141   1           LCDCommand(0xc0); // Move the Cursor to the Staring of Second Line
+ 142   1           LCDPuts("RIST-ECE-2019   ");
+ 143   1               delay(100); // Waith for 100 ms
+ 144   1       
+ 145   1           LCDCommand(0x01); // Clear LCD
+ 146   1               LCDPuts("UNIT :");
+ 147   1               LCDCommand(0xc0); // Move the Cursor to the Staring of Second Line
+ 148   1           LCDPuts("PULSE:");
+ 149   1               
+ 150   1                    
+ 151   1              while(1) // Indefinit Loop (always true)
+ 152   1               {
+ 153   2                  if(SENSOR==0)  // If SENSOR PIN Goes LOW
+ 154   2                               {
+ 155   3                                  PULSE++; // Increase the Value of PULSE by +1
+ 156   3                                      sprintf(buffer,"%4d",PULSE); // Convert the Numeric Data into String, and store in buffer 
+ 157   3                                      LCDCommand(0xc6); // Move the Cursor to the 6th Position of SEcond Line
+ 158   3                                      LCDPuts(buffer);// Display the data stored in buffer array
+ 159   3                                      while(SENSOR==0); 
+ 160   3      
+ 161   3                                      if(PULSE>=3) // if PULSE Count s 10 (We are onsidering 10 Pulse per Unit for Experimental Setup)
+ 162   3                                       {
+ 163   4                                         UNIT++; // Increase the t by +1
+ 164   4                                         PULSE=0; // and reset the PULSE value Back to 0 (ZERO)
+ 165   4                                         
+ 166   4                                         sprintf(buffer,"%4d",UNIT); // Convert the Numeric Data into String, and store in buffer 
+ 167   4                                         LCDCommand(0x86); // Move the Cursor to the 6th Position of First Line
+ 168   4                                         LCDPuts(buffer);// Display the data stored in buffer array
+ 169   4                                         xputs("http://server/ristemeter.com?DID=D001&UNIT=");
+ 170   4                                         xputs(buffer);
+ 171   4                                         tx(10);
+ 172   4                                         tx(13);
+ 173   4                                         
+ 174   4                                         sprintf(buffer,"%4d",PULSE); // Convert the Numeric Data into String, and store in buffer 
+ 175   4                                         LCDCommand(0xc6); // Move the Cursor to the 6th Position of SEcond Line
+ 176   4                                         LCDPuts(buffer);// Display the data stored in buffer array
+ 177   4                                          
+C51 COMPILER V8.12   CODE                                                                  03/29/2019 00:13:30 PAGE 4   
+
+ 178   4                                       }
+ 179   3                               }
+ 180   2      
+ 181   2               }
+ 182   1      
+ 183   1        }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    536    ----
+   CONSTANT SIZE    =    206    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----      22
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
